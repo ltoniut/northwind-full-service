@@ -1,0 +1,21 @@
+version: '3'
+services:
+  nest:
+    container_name: northwind-full-service
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+      args:
+        NPM_TOKEN: ${NPM_TOKEN}
+    ports:
+      - '3034:3034'
+    networks:
+      - northwind-full-service-network
+    volumes:
+      - '.:/app'
+      - '/app/node_modules'
+      - '/app/dist'
+
+networks:
+  northwind-full-service-network:
+    driver: bridge

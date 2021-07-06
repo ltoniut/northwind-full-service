@@ -1,0 +1,28 @@
+{
+  "entities": [
+      {
+          "name": "Category"
+      },
+      {
+          "name": "Customer"
+      },
+      {
+          "name": "Employee"
+      },
+      {
+          "name": "Order"
+      },
+      {
+          "name": "OrderDetails"
+      },
+      {
+          "name": "Product"
+      },
+      {
+          "name": "Shipper"
+      },
+      {
+          "name": "Supplier"
+      }
+  ]
+}

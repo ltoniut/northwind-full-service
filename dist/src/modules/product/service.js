@@ -23,19 +23,32 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const service_impl_1 = require("northwind-rest-commons/dist/shared/baseModules/service-impl");
+const Product_1 = require("northwind-rest-commons/dist/models/Product");
 const interfaces_1 = require("./interfaces");
 const repository_1 = require("./repository");
+const Category_1 = require("northwind-rest-commons/dist/typeorm/entities/Category");
 const response_dto_1 = require("northwind-rest-commons/dist/shared/dtos/response.dto");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
+const product_post_res_onse_dto_1 = require("./dtos/product.post.res\u1E55onse.dto");
+const interfaces_2 = require("../category/interfaces");
+const repository_2 = require("../category/repository");
+const service_1 = require("../category/service");
 let ProductServiceImpl = class ProductServiceImpl extends service_impl_1.BaseServiceImpl {
-    constructor(repository) {
+    constructor(repository, traditionalCategoryRepository, categoryService) {
         super('Product', repository);
+        this.traditionalCategoryRepository = traditionalCategoryRepository;
+        this.categoryService = categoryService;
     }
-    createProductAndCategory(ctx, fields, data) {
+    createWithCategory(ctx, fields, data) {
         return __awaiter(this, void 0, void 0, function* () {
             return this.repository.transaction(ctx, () => __awaiter(this, void 0, void 0, function* () {
-                const category = yield this.repository.saveProductGroup(data.category);
-                const product = data.product;
-                product.categoryId = category.id;
+                const product = yield this.extendCreatePrepare(ctx, data.product);
+                if (!product.categoryId && data.category) {
+                    const newCategoryData = yield this.categoryService.extendCreatePrepare(ctx, data.category);
+                    const category = yield this.repository.saveProductGroup(newCategoryData);
+                    product.categoryId = category.id;
+                }
                 const entity = yield this.repository.save(ctx, product);
                 yield this.extendCreatePostSave(ctx, entity);
                 const dto = this.extendCreateResponse(ctx, fields, entity);
@@ -43,10 +56,32 @@ let ProductServiceImpl = class ProductServiceImpl extends service_impl_1.BaseSer
             }));
         });
     }
+    createWithCategoryAlt(ctx, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.repository.transaction(ctx, () => __awaiter(this, void 0, void 0, function* () {
+                if (!data.product.categoryId && data.category) {
+                    const newCategory = new Category_1.Category();
+                    Object.assign(newCategory, data.category);
+                    const category = yield this.traditionalCategoryRepository.save(newCategory);
+                    data.product.categoryId = category.id;
+                }
+                const newProduct = new Product_1.Product();
+                Object.assign(newProduct, data.product);
+                yield this.repository.save(ctx, newProduct);
+                const dto = new product_post_res_onse_dto_1.PostProductResponseDTO();
+                Object.assign(dto, newProduct);
+                return dto;
+            }));
+        });
+    }
 };
 ProductServiceImpl = __decorate([
     __param(0, common_1.Inject(interfaces_1.ProductRepositoryKey)),
-    __metadata("design:paramtypes", [repository_1.ProductRepositoryImpl])
+    __param(1, typeorm_1.InjectRepository(Category_1.Category)),
+    __param(2, common_1.Inject(interfaces_2.CategoryServiceKey)),
+    __metadata("design:paramtypes", [repository_1.ProductRepositoryImpl,
+        typeorm_2.Repository,
+        service_1.CategoryServiceImpl])
 ], ProductServiceImpl);
 exports.ProductServiceImpl = ProductServiceImpl;
 //# sourceMappingURL=service.js.map

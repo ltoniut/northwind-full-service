@@ -20,9 +20,7 @@ export class ProductRepositoryImpl extends TypeORMRepository<Product> {
     );
   }
 
-  async saveProductGroup(entity: { categoryName: string, description: string, picture?: string }) {
-    const category = new Category();
-    Object.assign(category, { entity });
+  async saveProductGroup(category: Category) {
     const newCategory = await this.manager.save(Category, category);
 
     return newCategory;

@@ -12,45 +12,54 @@ import { ResponseDTO } from 'northwind-rest-commons/dist/shared/dtos/response.dt
 import { InjectRepository } from '@nestjs/typeorm';
 import { PostProductRequestDTO } from './dtos/product.post.request.dto';
 import { Repository } from 'typeorm';
-import { PostProduceResponseDTO } from './dtos/product.post.resṕonse.dto';
+import { PostProductResponseDTO } from './dtos/product.post.resṕonse.dto';
+import { CategoryRepositoryKey, CategoryServiceKey } from 'modules/category/interfaces';
+import { CategoryRepositoryImpl } from 'modules/category/repository';
+import { CategoryServiceImpl } from 'modules/category/service';
 
 export class ProductServiceImpl extends BaseServiceImpl<Product, ProductRepositoryImpl> {
   constructor(
     @Inject(ProductRepositoryKey)
     repository: ProductRepositoryImpl,
-    @InjectRepository(Product)
-    private productRepository: Repository<Product>,
     @InjectRepository(Category)
-    private categoryRepository: Repository<Category>,
+    private traditionalCategoryRepository: Repository<Category>,
+    @Inject(CategoryServiceKey)
+    private categoryService: CategoryServiceImpl
   ) {
     super('Product', repository);
   }
 
-  async createWithCategory(ctx: Context, fields: FieldsQuery, data: {product: Product, category?: Category}) {
+  async createWithCategory(ctx: Context, fields: FieldsQuery, data: {product: BaseDTO, category?: BaseDTO}) {
     return this.repository.transaction(ctx, async () => {
-      if (!data.product.categoryId && data.category) {
-        const category = await this.repository.saveProductGroup(data.category);
-        const product = data.product;
-        product.categoryId = data.category.id;
+      const product = await this.extendCreatePrepare(ctx, data.product);
+
+      if (!product.categoryId && data.category) {
+        const newCategoryData = await this.categoryService.extendCreatePrepare(ctx, data.category);
+        const category = await this.repository.saveProductGroup(newCategoryData);
+        product.categoryId = category.id;
       }
-      const entity = await this.repository.save(ctx, data.product);
+
+      const entity = await this.repository.save(ctx, product);
       await this.extendCreatePostSave(ctx, entity);
       const dto = this.extendCreateResponse(ctx, fields, entity);
       return new ResponseDTO((dto as unknown) as BaseDTO);
     });
   }
 
-  async createWithCategoryAlt(ctx: Context, data: {dto: PostProductRequestDTO}) : Promise<PostProduceResponseDTO> {
+  async createWithCategoryAlt(ctx: Context, data: PostProductRequestDTO) : Promise<PostProductResponseDTO> {
     return this.repository.transaction(ctx, async () => {
-      if (!data.dto.categoryId && data.dto.category) {
-        const category = await this.categoryRepository.save(data.dto.category);
-        data.dto.categoryId = category.id;
+      if (!data.product.categoryId && data.category) {
+        const newCategory : Category = new Category();
+        Object.assign(newCategory, data.category);
+        const category = await this.traditionalCategoryRepository.save(newCategory);
+        data.product.categoryId = category.id;
       }
-      const product : Product = new Product();
-      Object.assign(product, data.dto);
-      const entity = await this.productRepository.save(product);
-      const dto = new PostProduceResponseDTO();
-      Object.assign(dto, product);
+
+      const newProduct : Product = new Product();
+      Object.assign(newProduct, data.product);
+      await this.repository.save(ctx, newProduct);
+      const dto = new PostProductResponseDTO();
+      Object.assign(dto, newProduct);
 
       return dto;
     });

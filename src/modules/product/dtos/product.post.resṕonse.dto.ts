@@ -1,7 +1,7 @@
-export class PostProduceResponseDTO {
+export class PostProductResponseDTO {
   id: number;
   productName: string;
-  customerId: number;
+  supplierId: number;
   categoryId?: number;
   quantityPerUnit: string;
   unitPrice: number;

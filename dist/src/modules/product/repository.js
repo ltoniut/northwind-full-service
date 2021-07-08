@@ -30,10 +30,8 @@ let ProductRepositoryImpl = class ProductRepositoryImpl extends repository_typeo
     constructor(manager) {
         super(Product_1.Product, [], [], manager, {});
     }
-    saveProductGroup(entity) {
+    saveProductGroup(category) {
         return __awaiter(this, void 0, void 0, function* () {
-            const category = new Category_1.Category();
-            Object.assign(category, { entity });
             const newCategory = yield this.manager.save(Category_1.Category, category);
             return newCategory;
         });
